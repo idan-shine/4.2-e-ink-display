@@ -1,0 +1,435 @@
+substitutions:
+  devicename: temp-display
+  gpio_spi_clk_pin: GPIO13
+  gpio_spi_mosi_pin: GPIO14
+  gpio_cs_pin: GPIO15
+  gpio_busy_pin: GPIO25
+  gpio_reset_pin: GPIO26
+  gpio_dc_pin: GPIO27
+
+esphome:
+  name: temp-display
+  platform: ESP32
+  board: esp32dev
+  on_boot:
+    priority: -100
+    then:
+      - switch.turn_on: statusLED
+      - delay: 1s
+      - switch.turn_off: statusLED
+
+wifi:
+  networks:
+  - ssid: 
+    password: 
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: 
+    password: 
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: 
+
+ota:
+  password: 
+
+spi:
+  clk_pin: $gpio_spi_clk_pin
+  mosi_pin: $gpio_spi_mosi_pin
+  id: epaper_display
+  
+
+
+#########################-----TIME-----#########################
+
+time:
+  - platform: homeassistant
+    timezone: Asia/Jerusalem
+    id: current_time
+    on_time_sync:
+      - component.update: uptime_timestamp
+
+#########################-----SWITCHES-----#########################
+
+switch:
+  - platform: restart
+    name: "$devicename Restart"
+    id: restartesp
+
+  - platform: gpio
+    id: statusLED
+    name: "$devicename Status LED"
+    pin:
+      number: GPIO2
+      mode: OUTPUT
+    restore_mode: ALWAYS_OFF
+
+#########################-----SENSORS-----#########################
+
+binary_sensor:
+  - platform: status
+    name: "$devicename Status"
+
+  - platform: homeassistant
+    name: "Out Temp Rising"
+    entity_id: binary_sensor.temp_rising
+    id: out_temp_rising
+    internal: true
+
+  - platform: homeassistant
+    name: "Out Temp Failing"
+    entity_id: binary_sensor.temp_falling
+    id: out_temp_failing
+    internal: true
+
+sensor:
+  - platform: uptime
+    name: "$devicename Uptime Sec"
+    id: uptime_sec
+    internal: true
+
+  - platform: wifi_signal
+    name: "$devicename WiFi Signal"
+    update_interval: 120s
+
+  - platform: template
+    id: uptime_timestamp
+    name: "$devicename Uptime"
+    device_class: "timestamp"
+    accuracy_decimals: 0
+    update_interval: never
+    lambda: |-
+      static float timestamp = (
+        id(current_time).utcnow().timestamp - id(uptime_sec).state
+      );
+      return timestamp;
+
+  - platform: homeassistant
+    name: "1st floor Temp. from HA"
+    entity_id: sensor.bedroom_up_sense_temperature
+    unit_of_measurement: "°"
+    accuracy_decimals: 1
+    id: average_1st_temp
+    internal: true
+
+  - platform: homeassistant
+    name: "1st floor Hum. from HA"
+    entity_id: sensor.bedroom_up_sense_humidity_level
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    id: average_1st_hum
+    internal: true
+
+  - platform: homeassistant
+    name: "2nd floor Temp. from HA"
+    entity_id: sensor.lumi_lumi_airmonitor_acn01_temperature
+    unit_of_measurement: "°"
+    accuracy_decimals: 1
+    id: average_2nd_temp
+    internal: true
+
+  - platform: homeassistant
+    name: "2nd floor Hum. from HA"
+    entity_id: sensor.lumi_lumi_airmonitor_acn01_humidity
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    id: average_2nd_hum
+    internal: true
+
+  - platform: homeassistant
+    name: "2nd floor AQI from HA"
+    entity_id: sensor.lumi_lumi_airmonitor_acn01_voc_level
+    unit_of_measurement: "ppb"
+    accuracy_decimals: 0
+    id: aqi_index
+    internal: true
+
+  - platform: homeassistant
+    name: "Outdoor Temp. from HA"
+    entity_id: sensor.openweathermap_temperature
+    unit_of_measurement: "°"
+    accuracy_decimals: 1
+    id: outdoor_temp
+    internal: true
+
+  - platform: homeassistant
+    name: "Outdoor Hum. from HA"
+    entity_id: sensor.openweathermap_humidity
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    id: outdoor_hum
+    internal: true
+
+  - platform: homeassistant
+    name: "Day1 Temp Forecast"
+    entity_id: sensor.day_1_temp
+    id: forcast_1_temp
+    internal: true
+
+  - platform: homeassistant
+    name: "Day2 Temp Forecast"
+    entity_id: sensor.day_2_temp
+    id: forcast_2_temp
+    internal: true
+
+  - platform: homeassistant
+    name: "Day3 Temp Forecast"
+    entity_id: sensor.day_3_temp
+    id: forcast_3_temp
+    internal: true
+
+#########################-----TEXT SENSORS-----#########################
+
+text_sensor:
+  - platform: homeassistant
+    name: "Day1 Weather Icon"
+    entity_id: sensor.day_1_forecast
+    id: forcast_1
+    internal: true
+
+  - platform: homeassistant
+    name: "Day2 Weather Icon"
+    entity_id: sensor.day_2_forecast
+    id: forcast_2
+    internal: true
+
+  - platform: homeassistant
+    name: "Day3 Weather Icon"
+    entity_id: sensor.day_3_forecast
+    id: forcast_3
+    internal: true
+
+  - platform: template
+    name: "$devicename Air Quality Level"
+    lambda: |-
+      if (id(aqi_index).state <= 65) {
+          return {"Excellent"};    
+      } else if (id(aqi_index).state <= 220) {
+          return {"Good"};         
+      } else if (id(aqi_index).state <= 660) {
+          return {"Moderate"};
+      } else if (id(aqi_index).state <= 2200) {
+          return {"Poor"};
+      } else {
+          return {"Unhealthy"};       // POOR
+      }
+    icon: "mdi:air-filter"
+    update_interval: 60s
+    id: aqi_level
+
+
+#########################-----DISPLAY-----#########################      
+      
+display:
+  - platform: waveshare_epaper
+    id: epaper
+    cs_pin: $gpio_cs_pin
+    busy_pin: $gpio_busy_pin
+    reset_pin: $gpio_reset_pin
+    dc_pin: $gpio_dc_pin
+    model: 4.20in # 300x400
+    rotation: 270°
+    update_interval: 60s
+    lambda: |-
+      ESP_LOGI("display", "Updating...");
+      
+      // OUTSIDE
+      it.printf(7, 15, id(font_medium_20), TextAlign::BASELINE_LEFT, "Outside");
+      it.line(81, 14, 293, 14);
+      
+      it.printf(10, 84, id(icon_font_35), TextAlign::BASELINE_LEFT, "\U000F058E"); 
+      if (id(outdoor_hum).has_state()) {
+          it.printf(41, 82, id(font_regular_45), TextAlign::BASELINE_LEFT, "%2.0f", id(outdoor_hum).state);
+          it.printf(95, 82, id(font_regular_30), TextAlign::BASELINE_LEFT, "%%");
+      }
+      it.printf(120, 80, id(icon_font_40), TextAlign::BASELINE_LEFT, "\U000F050F"); 
+      if (id(outdoor_temp).has_state()) {
+          it.printf(220, 82, id(font_regular_65), TextAlign::BASELINE_CENTER, "%.1f°", id(outdoor_temp).state);
+      }
+      
+      if (id(out_temp_rising).has_state() && id(out_temp_failing).has_state()) {
+          if (id(out_temp_rising).state == true) {
+              it.printf(296, 82, id(icon_font_20), TextAlign::BASELINE_RIGHT, "\U000F005C"); 
+          }
+          if (id(out_temp_failing).state == true) {
+              it.printf(296, 82, id(icon_font_20), TextAlign::BASELINE_RIGHT, "\U000F0043"); 
+          }
+      }
+      
+      // INSIDE
+      it.printf(7, 110, id(font_medium_20), TextAlign::BASELINE_LEFT, "Inside");
+      it.line(65, 109, 293, 109);
+
+      // Floor 1
+      it.printf(18, 162, id(icon_font_30), TextAlign::BASELINE_LEFT, "\U000F04B9"); 
+      
+      it.printf(60, 161, id(icon_font_25), TextAlign::BASELINE_LEFT, "\U000F058E"); 
+      if (id(average_2nd_hum).has_state()) {
+          it.printf(125, 160, id(font_regular_35), TextAlign::BASELINE_RIGHT, "%.0f", id(average_2nd_hum).state);
+          it.printf(128, 160, id(font_regular_30), TextAlign::BASELINE_LEFT, "%%");
+      }
+      it.printf(160, 159, id(icon_font_30), TextAlign::BASELINE_LEFT, "\U000F050F"); 
+      if (id(average_2nd_temp).has_state()) {
+          it.printf(290, 160, id(font_regular_45), TextAlign::BASELINE_RIGHT, "%.1f°", id(average_2nd_temp).state);
+      }
+
+      // Floor 0
+      it.printf(18, 212, id(icon_font_30), TextAlign::BASELINE_LEFT, "\U000F02E3"); 
+      
+      it.printf(60, 211, id(icon_font_25), TextAlign::BASELINE_LEFT, "\U000F058E"); 
+      if (id(average_1st_hum).has_state()) {
+          it.printf(125, 210, id(font_regular_35), TextAlign::BASELINE_RIGHT, "%.0f", id(average_1st_hum).state);
+          it.printf(128, 210, id(font_regular_30), TextAlign::BASELINE_LEFT, "%%");
+      }
+      it.printf(160, 209, id(icon_font_30), TextAlign::BASELINE_LEFT, "\U000F050F"); 
+      if (id(average_1st_temp).has_state()) {
+          it.printf(290, 210, id(font_regular_45), TextAlign::BASELINE_RIGHT, "%.1f°", id(average_1st_temp).state);
+      }
+      
+      // AQI
+      it.printf(20, 255, id(icon_font_25), TextAlign::BASELINE_LEFT, "\U000F0D43"); 
+      
+      it.printf(68, 255, id(font_regular_30), TextAlign::BASELINE_LEFT, "%s", id(aqi_level).state.c_str());
+
+      // WEATHER
+      it.printf(7, 285, id(font_medium_20), TextAlign::BASELINE_LEFT, "Weather Forecast");
+      it.line(175, 284, 293, 284);
+
+      if (id(forcast_1).has_state() && id(forcast_1_temp).has_state() && id(forcast_2).has_state() && id(forcast_2_temp).has_state() && id(forcast_3).has_state() && id(forcast_3_temp).has_state()) {
+          std::map<std::string, std::string> weather_state { 
+            { "clear-night", "\U000F0594" },
+            { "cloudy", "\U000F0590" },
+            { "exceptional", "\U000F05D6" },
+            { "fog", "\U000F0591" },                
+            { "hail", "\U000F0592" },               
+            { "lightning", "\U000F0593" },              
+            { "lightning-rainy", "\U000F067E" },                
+            { "partlycloudy", "\U000F0595"},                 
+            { "pouring", "\U000F0596" },  
+            { "rainy", "\U000F0597" },
+            { "snowy", "\U000F0598" },
+            { "snowy-rainy", "\U000F067F" },
+            { "sunny", "\U000F0599" },
+            { "windy", "\U000F059D" },
+            { "windy-variant", "\U000F059E" }
+          };
+
+          it.printf(20, 320, id(icon_font_25), TextAlign::BASELINE_LEFT, weather_state[id(forcast_1).state.c_str()].c_str());
+          it.printf(45, 321, id(font_regular_30), TextAlign::BASELINE_LEFT, "%.1f°", id(forcast_1_temp).state);
+          it.printf(110, 320, id(icon_font_25), TextAlign::BASELINE_LEFT, weather_state[id(forcast_2).state.c_str()].c_str());
+          it.printf(135, 321, id(font_regular_30), TextAlign::BASELINE_LEFT, "%.1f°", id(forcast_2_temp).state);
+          it.printf(200, 320, id(icon_font_25), TextAlign::BASELINE_LEFT, weather_state[id(forcast_3).state.c_str()].c_str());
+          it.printf(225, 321, id(font_regular_30), TextAlign::BASELINE_LEFT, "%.1f°", id(forcast_3_temp).state);
+        }
+   
+      // TIME
+      it.line(7, 337, 293, 337);
+      it.strftime(7, 363, id(font_medium_20), TextAlign::BASELINE_LEFT, "%A", id(current_time).now());
+      it.strftime(7, 393, id(font_medium_20), TextAlign::BASELINE_LEFT, "%d %b. %y", id(current_time).now());
+      it.strftime(290, 393, id(font_regular_65), TextAlign::BASELINE_RIGHT, "%H:%M", id(current_time).now());
+      
+#########################-----FONTS-----#########################       
+
+
+font:
+  - file: 'fonts/Kanit-Medium.ttf'
+    id: font_medium_20
+    size: 20
+    glyphs:
+      ['&', '@', '!', ',', '.', '"', '%', '+', '-', '_', ':', '°', '0',
+       '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
+       'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+       'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
+       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+       'u', 'v', 'w', 'x', 'y', 'z', '/', 'é']
+
+  - file: 'fonts/Kanit-Regular.ttf'
+    id: font_regular_30
+    size: 30
+    glyphs: 
+      ['&', '@', '!', ',', '.', '"', '%', '+', '-', '_', ':', '°', '0',
+       '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
+       'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+       'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
+       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+       'u', 'v', 'w', 'x', 'y', 'z', '/', 'è']
+
+  - file: 'fonts/Kanit-Regular.ttf'
+    id: font_regular_35
+    size: 35
+    glyphs: 
+      ['!', ',', '.', '"', '%', '-', '_', ':', '°', '/',
+       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ']
+
+  - file: 'fonts/Kanit-Regular.ttf'
+    id: font_regular_45
+    size: 45
+    glyphs: 
+      ['!', ',', '.', '"', '%', '-', '_', ':', '°', '/',
+       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ']
+
+  - file: 'fonts/Kanit-Regular.ttf'
+    id: font_regular_65
+    size: 65
+    glyphs: 
+      ['!', ',', '.', '"', '%', '-', '_', ':', '°', '/',
+       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ']
+
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: icon_font_20
+    size: 20
+    glyphs: [
+      "\U000F0043", # mdi-arrow-bottom-right
+      "\U000F005C"  # mdi-arrow-top-right
+      ]
+
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: icon_font_25
+    size: 25
+    glyphs: [
+      "\U000F058E", # mdi-water-percent
+      "\U000F0D43", # mdi-air-filter
+      "\U000F002A", # mdi-alert-outline
+      "\U000F0594", # mdi-weather-night - clear-night
+      "\U000F0590", # mdi-weather-cloudy
+      "\U000F05D6", # mdi-alert-circle-outline - exeptionnal
+      "\U000F0591", # mdi-weather-fog
+      "\U000F0592", # mdi-weather-hail
+      "\U000F0593", # mdi-weather-lightning
+      "\U000F067E", # mdi-weather-lightning-rainy
+      "\U000F0595", # mdi-weather-partly-cloudy
+      "\U000F0596", # mdi-weather-pouring
+      "\U000F0597", # mdi-weather-rainy
+      "\U000F0598", # mdi-weather-snowy
+      "\U000F067F", # mdi-weather-snowy-rainy
+      "\U000F0599", # mdi-weather-sunny
+      "\U000F059D", # mdi-weather-windy
+      "\U000F059E"  # mdi-weather-windy-variant
+      ]
+
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: icon_font_30
+    size: 30
+    glyphs: [
+      "\U000F050F", # mdi-thermometer
+      "\U000F04B9", # mdi-home-floor-1
+      "\U000F02E3"  # mdi-home-floor-0
+      ]
+
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: icon_font_35
+    size: 35
+    glyphs: ["\U000F058E"]  # mdi-water-percent
+
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: icon_font_40
+    size: 40
+    glyphs: ["\U000F050F"] # mdi-thermometer
