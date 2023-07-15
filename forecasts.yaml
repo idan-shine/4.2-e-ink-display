@@ -1,0 +1,38 @@
+  - platform: template
+    sensors:
+      day_1_forecast:
+        value_template:  "{{ state_attr('weather.openweathermap', 'forecast')[1].condition }}" 
+  - platform: template
+    sensors:
+      day_1_temp:
+        value_template:  "{{ state_attr('weather.openweathermap', 'forecast')[1].temperature }}" 
+  - platform: template
+    sensors:
+      day_1_dow:
+        value_template:  "{{ as_datetime(state_attr('weather.openweathermap', 'forecast')[1].datetime).strftime('%a') }}"
+
+  - platform: template
+    sensors:
+      day_2_forecast:
+        value_template:  "{{ state_attr('weather.openweathermap', 'forecast')[2].condition }}" 
+  - platform: template
+    sensors:
+      day_2_temp:
+        value_template:  "{{ state_attr('weather.openweathermap', 'forecast')[2].temperature }}" 
+  - platform: template
+    sensors:
+      day_2_dow:
+        value_template:  "{{ as_datetime(state_attr('weather.openweathermap', 'forecast')[2].datetime).strftime('%a') }}"
+
+  - platform: template
+    sensors:
+      day_3_forecast:
+        value_template:  "{{ state_attr('weather.openweathermap', 'forecast')[3].condition }}" 
+  - platform: template
+    sensors:
+      day_3_temp:
+        value_template:  "{{ state_attr('weather.openweathermap', 'forecast')[3].temperature }}" 
+  - platform: template
+    sensors:
+      day_3_dow:
+        value_template:  "{{ as_datetime(state_attr('weather.openweathermap', 'forecast')[3].datetime).strftime('%a') }}"
