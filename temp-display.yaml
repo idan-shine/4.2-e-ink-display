@@ -169,19 +169,19 @@ sensor:
 
   - platform: homeassistant
     name: "Day1 Temp Forecast"
-    entity_id: sensor.day_1_temp
+    entity_id: sensor.day1_temp_forecast
     id: forcast_1_temp
     internal: true
 
   - platform: homeassistant
     name: "Day2 Temp Forecast"
-    entity_id: sensor.day_2_temp
+    entity_id: sensor.day2_temp_forecast
     id: forcast_2_temp
     internal: true
 
   - platform: homeassistant
     name: "Day3 Temp Forecast"
-    entity_id: sensor.day_3_temp
+    entity_id: sensor.day3_temp_forecast
     id: forcast_3_temp
     internal: true
 
@@ -190,37 +190,37 @@ sensor:
 text_sensor:
   - platform: homeassistant
     name: "Day1 Weather Icon"
-    entity_id: sensor.day_1_forecast
+    entity_id: sensor.day1_forecast
     id: forcast_1
     internal: true
 
   - platform: homeassistant
     name: "Day2 Weather Icon"
-    entity_id: sensor.day_2_forecast
+    entity_id: sensor.day2_forecast
     id: forcast_2
     internal: true
 
   - platform: homeassistant
     name: "Day3 Weather Icon"
-    entity_id: sensor.day_3_forecast
+    entity_id: sensor.day3_forecast
     id: forcast_3
     internal: true
   
   - platform: homeassistant
     name: "Day1 name"
-    entity_id: sensor.day_1_dow
+    entity_id: sensor.day1_day_name
     id: forcast_dow_1
     internal: true
 
   - platform: homeassistant
     name: "Day2 name"
-    entity_id: sensor.day_2_dow
+    entity_id: sensor.day2_day_name
     id: forcast_dow_2
     internal: true
 
   - platform: homeassistant
     name: "Day3 name"
-    entity_id: sensor.day_3_dow
+    entity_id: sensor.day3_day_name
     id: forcast_dow_3
     internal: true
 
