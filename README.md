@@ -1,5 +1,6 @@
 # 4.2-e-ink-display
 Conf and fonts for a e-ink displayed based on esphome for displaying temp and other info
+Don't forget adding: "template: !include forecasts.yaml" to your configuration.yaml file
 
 Based heavily on makai's project published here: https://community.home-assistant.io/t/air-quality-sensors-e-ink-display-using-esphome/201776
 
